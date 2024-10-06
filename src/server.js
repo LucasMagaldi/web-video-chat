@@ -19,8 +19,11 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     console.log(socket.id)
+    socket.on('join-user', (username) => {
+        console.log(username)
+    })
 })
 
-app.listen(9000, () => {
+server.listen(9000, () => {
     console.log('*** Server Listening on port 9000 ***')
 })
