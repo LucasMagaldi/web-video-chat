@@ -8,6 +8,8 @@ const app = express()
 const server = createServer (app)
 const io = new Server(server)
 
+const users = {}
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const appPath = __dirname + '/app/index.html'
 
@@ -18,10 +20,43 @@ app.get('/', (req, res) => {
 })
 
 io.on('connection', (socket) => {
-    console.log(socket.id)
     socket.on('join-user', (username) => {
-        console.log(username)
+        users[username] = { username, id: socket.id}
+        io.emit('joined', users)
     })
+
+    socket.on('offer', ({
+        from,
+        to,
+        offer
+    }) => {
+        console.log(offer)
+        io.to(to.id).emit('offer', { from, to, offer })
+    })
+
+    socket.on('answer', ({
+        from,
+        to,
+        answer
+    }) => {
+        io.to(users[from].id).emit('answer', { from, to, answer })
+    })
+
+    socket.on("end-call", ({from, to}) => {
+        io.to(users[to].id).emit("end-call", {from, to});
+    });
+
+    socket.on("call-ended", caller => {
+        const [from, to] = caller;
+        io.to(users[from].id).emit("call-ended", caller);
+        io.to(users[to].id).emit("call-ended", caller);
+    })
+
+    socket.on("icecandidate", candidate => {
+        console.log({ candidate });
+        //broadcast to other peers
+        socket.broadcast.emit("icecandidate", candidate);
+    }); 
 })
 
 server.listen(9000, () => {
